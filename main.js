@@ -25,15 +25,20 @@ if (process.defaultApp) {
 async function createWindow () {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1024,
+    height: 720,
+    minWidth: 1024,
+    minHeight: 720,
     webPreferences: {
       preload: preloadDir,
+      contextIsolation: true,
+      nodeIntegration: false,
     }
   })
 
   // and load the index.html of the app.
   await mainWindow.loadFile(indexDir)
+  return mainWindow
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
@@ -59,12 +64,12 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     
-    // Create Windows
-    createWindow()
-
-    // Register IPC Handlers
-    registerIpcHandlers(ipcMain, { mainWindow, dialog, shell });
+    // Register IPC Handlers first, before creating the window
+    registerIpcHandlers(ipcMain, { getMainWindow: () => mainWindow, dialog, shell, app });
     log.ipc('IPC handlers registered.');
+
+    // Create Windows
+    await createWindow()
 
     app.on('activate', function () {
       // On macOS, it's common to re-create a window in the app when the

@@ -2,18 +2,159 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-    <link href="styles.css" rel="stylesheet">
-    <title>Hello World!</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: blob: data:; media-src 'self' https: blob: data:; connect-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <link href="../css/styles.css" rel="stylesheet">
+    <title>Lichen</title>
   </head>
   <body>
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>,
-    Chromium <span id="chrome-version"></span>,
-    and Electron <span id="electron-version"></span>.
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>Lichen</h1>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-page="upload">
+            <span class="nav-icon">📝</span>
+            <span>Upload</span>
+          </button>
+          <button class="nav-item" data-page="tasks">
+            <span class="nav-icon">⬆</span>
+            <span>Tasks</span>
+          </button>
+          <button class="nav-item" data-page="history">
+            <span class="nav-icon">📋</span>
+            <span>History</span>
+          </button>
+          <button class="nav-item" data-page="settings">
+            <span class="nav-icon">⚙</span>
+            <span>Settings</span>
+          </button>
+        </nav>
+      </aside>
 
-    <!-- You can also require other files to run in this process -->
-    <script src="renderer.js"></script>
+      <main class="main-content">
+        <!-- UPLOAD PAGE -->
+        <div id="page-upload" class="page active">
+          <div class="page-header">
+            <h2>Upload</h2>
+            <p>Select a service, add files, and start uploading to the queue.</p>
+          </div>
+
+          <!-- Step 1: Service Selection -->
+          <section class="upload-step card" id="upload-service">
+            <div class="step-header">
+              <div class="step-number">1</div>
+              <h3>Select a service</h3>
+            </div>
+            <div id="service-list" class="service-list"></div>
+          </section>
+
+          <!-- Step 2: File Selection -->
+          <section class="upload-step card" id="upload-files">
+            <div class="step-header">
+              <div class="step-number">2</div>
+              <h3>Select files to upload</h3>
+            </div>
+            <div id="drop-zone" class="drop-zone">
+              <strong>Drop files here</strong>
+              <span>or click to browse</span>
+            </div>
+            <input id="file-input" type="file" multiple hidden>
+            <div id="selected-files" class="file-list empty-state">No files selected yet.</div>
+            <div class="step-footer">
+              <button class="ghost-button" id="upload-clear">Clear files</button>
+              <button class="primary-button" id="upload-start">Upload to queue</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- TASKS PAGE -->
+        <div id="page-tasks" class="page">
+          <div class="page-header">
+            <h2>Tasks</h2>
+            <p>Track the progress of all uploads in the queue.</p>
+          </div>
+
+          <article class="card tasks-queue-panel">
+            <div class="section-heading">
+              <h3>Upload queue</h3>
+            </div>
+            <div id="tasks-queue" class="tasks-queue empty-state">No uploads queued yet. Add files on the Upload page.</div>
+          </article>
+        </div>
+
+        <!-- HISTORY PAGE -->
+        <div id="page-history" class="page hidden">
+          <div class="page-header">
+            <h2>Upload History</h2>
+            <p>View and manage all your uploaded files.</p>
+          </div>
+
+          <article class="card history-panel">
+            <div class="section-heading">
+              <h3>Uploaded files</h3>
+              <button class="ghost-button small" id="history-reload">Reload</button>
+            </div>
+
+            <div class="history-toolbar">
+              <label class="history-filter">
+                <span>Search</span>
+                <input id="history-search" type="search" placeholder="Search by file name">
+              </label>
+              <label class="history-filter">
+                <span>Service</span>
+                <select id="history-service-filter">
+                  <option value="all">All services</option>
+                </select>
+              </label>
+              <label class="history-filter">
+                <span>From</span>
+                <input id="history-date-from" type="date">
+              </label>
+              <label class="history-filter">
+                <span>To</span>
+                <input id="history-date-to" type="date">
+              </label>
+              <div class="history-toolbar-actions">
+                <button class="ghost-button small" id="history-select-visible">Select visible</button>
+                <button class="ghost-button small" id="history-clear-selection">Clear selection</button>
+                <button class="primary-button" id="history-export">Export JSON</button>
+              </div>
+            </div>
+
+            <div class="history-summary" id="history-summary">0 selected</div>
+            <div id="history-list" class="history-list empty-state">No upload history yet.</div>
+          </article>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div id="page-settings" class="page hidden">
+          <div class="page-header">
+            <h2>Settings</h2>
+            <p>Configure your preferences and upload credentials.</p>
+          </div>
+
+          <article class="card settings-panel">
+            <div id="settings-form" class="settings-form"></div>
+            <div class="step-footer">
+              <button class="primary-button" id="settings-save">Save</button>
+            </div>
+          </article>
+        </div>
+      </main>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="modal hidden">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">✕</button>
+        <div id="modal-preview-media" class="modal-preview-media"></div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="../js/renderer.js"></script>
   </body>
 </html>

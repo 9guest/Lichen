@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: blob: data:; media-src 'self' https: blob: data:; connect-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <link href="../css/styles.css" rel="stylesheet">
+    <title>Lichen Link Library</title>
+  </head>
+  <body data-page="history">
+    <main class="app-shell history-shell">
+      <section class="hero card compact-hero">
+        <div>
+          <p class="eyebrow">Library</p>
+          <h1>Saved direct links</h1>
+          <p class="hero-copy">Preview, open, and copy links that were uploaded from this device.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="ghost-button" id="reload-history">Reload</button>
+          <button class="primary-button" id="copy-selected">Copy selected</button>
+        </div>
+      </section>
+
+      <section class="history-layout">
+        <article class="card section-panel history-list-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Records</p>
+              <h2>Upload history</h2>
+            </div>
+          </div>
+          <div id="history-list" class="history-list empty-state">No upload history yet.</div>
+        </article>
+
+        <article class="card section-panel preview-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h2>Direct link</h2>
+            </div>
+          </div>
+          <div id="preview-empty" class="empty-state">Select a record to preview it.</div>
+          <div id="preview-view" class="preview-view hidden">
+            <div class="preview-media" id="preview-media"></div>
+            <div class="preview-meta">
+              <div class="preview-path" id="preview-name"></div>
+              <a id="preview-link" href="#" target="_blank" rel="noreferrer"></a>
+              <div class="preview-controls">
+                <button class="primary-button" id="preview-copy">Copy link</button>
+                <button class="ghost-button" id="preview-open">Open link</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="../js/history.js"></script>
+  </body>
+</html>
