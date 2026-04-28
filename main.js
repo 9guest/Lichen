@@ -29,12 +29,17 @@ async function createWindow () {
     height: 720,
     minWidth: 1024,
     minHeight: 720,
+    icon: path.join(__dirname, 'build', 'icon.ico'),
     webPreferences: {
       preload: preloadDir,
       contextIsolation: true,
       nodeIntegration: false,
     }
   })
+
+  Menu.setApplicationMenu(null)
+  mainWindow.setMenuBarVisibility(false)
+  mainWindow.setAutoHideMenuBar(true)
 
   // and load the index.html of the app.
   await mainWindow.loadFile(indexDir)

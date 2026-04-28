@@ -10,15 +10,15 @@ const SERVICE_CONFIG = {
     supportedFormats: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'],
     maxFileSize: 32 * 1024 * 1024, // 32 MB
     singleSelect: true, // Only one service can be used at a time,
-    apiLink: "https://api.imgbb.com/"
+    apiLink: "https://api.imgbb.com/" // This is where the api key can be obtained
   },
   internetArchive: {
     label: 'Internet Archive',
-    restrictions: 'not be over 100GB, not contain more than 10,000 files.',
+    restrictions: 'Not be over 100GB, not contain more than 10,000 files.',
     supportedFormats: null, // All formats supported
     maxFileSize: null,
     singleSelect: true, // Only one service can be used at a time,
-    apiLink: "https://archive.org/account/s3.php"
+    apiLink: "https://archive.org/account/s3.php" // This is where the api key can be obtained
   },
 };
 

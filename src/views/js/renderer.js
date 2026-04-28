@@ -153,7 +153,7 @@ function renderServiceList() {
     
     const restrictions = service.id === 'imgbb' 
       ? 'Images only, max 32 MB per file'
-      : 'No file size limit';
+      : 'Not be over 100GB, not contain more than 10,000 files';
     
     return `
       <label class="service-card ${!hasCredentials ? 'no-credentials' : ''}">
@@ -288,9 +288,44 @@ function renderSelectedFiles() {
 }
 
 function renderSettingsForm() {
-  const imgbb = state.settings?.services?.imgbb ?? {};
-  const internetArchive = state.settings?.services?.internetArchive ?? {};
+  const services = Array.isArray(state.supportedServices) ? state.supportedServices : [];
   const currentTheme = state.settings?.theme ?? 'system';
+
+  const serviceSections = services.map((service) => {
+    const serviceSettings = state.settings?.services?.[service.id] ?? {};
+    const apiLink = service.apiLink
+      ? `<a class="settings-help-link" href="${escapeHtml(service.apiLink)}" data-api-link="${escapeHtml(service.apiLink)}">Get the API key</a>`
+      : '';
+
+    if (service.id === 'imgbb') {
+      return `
+        <div class="settings-group">
+          <h3>${escapeHtml(service.label)} <small>(${escapeHtml(service.restrictions ?? '')})</small></h3>
+          <label>API key
+            <input data-setting="imgbb.apiKey" type="password" value="${escapeHtml(serviceSettings.apiKey ?? '')}" placeholder="Enter your imgbb API key">
+            <span class="settings-help">${apiLink}</span>
+          </label>
+        </div>
+      `;
+    }
+
+    if (service.id === 'internetArchive') {
+      return `
+        <div class="settings-group">
+          <h3>${escapeHtml(service.label)} <small>(${escapeHtml(service.restrictions ?? '')})</small></h3>
+          <label>Secret key<input data-setting="internetArchive.secretKey" type="password" value="${escapeHtml(serviceSettings.secretKey ?? '')}" placeholder="Secret key from archive.org"></label>
+          <label>Identifier<input data-setting="internetArchive.identifier" type="text" value="${escapeHtml(serviceSettings.identifier ?? '')}" placeholder="lichen-upload"></label>
+          <label>Collection<input data-setting="internetArchive.collection" type="text" value="${escapeHtml(serviceSettings.collection ?? '')}" placeholder="opensource"></label>
+          <label>Access key
+            <input data-setting="internetArchive.accessKey" type="text" value="${escapeHtml(serviceSettings.accessKey ?? '')}" placeholder="Access key from archive.org">
+            <span class="settings-help">${apiLink}</span>
+          </label>
+        </div>
+      `;
+    }
+
+    return '';
+  }).join('');
 
   settingsForm.innerHTML = `
     <div class="settings-group">
@@ -301,17 +336,7 @@ function renderSettingsForm() {
         </select>
       </label>
     </div>
-    <div class="settings-group">
-      <h3>imgbb <small>(Images only, max 32 MB)</small></h3>
-      <label>API key<input data-setting="imgbb.apiKey" type="password" value="${escapeHtml(imgbb.apiKey ?? '')}" placeholder="Get your API key from imgbb.com"></label>
-    </div>
-    <div class="settings-group">
-      <h3>Internet Archive <small>(No file size limit)</small></h3>
-      <label>Access key<input data-setting="internetArchive.accessKey" type="text" value="${escapeHtml(internetArchive.accessKey ?? '')}" placeholder="Access key from archive.org"></label>
-      <label>Secret key<input data-setting="internetArchive.secretKey" type="password" value="${escapeHtml(internetArchive.secretKey ?? '')}" placeholder="Secret key from archive.org"></label>
-      <label>Identifier<input data-setting="internetArchive.identifier" type="text" value="${escapeHtml(internetArchive.identifier ?? '')}" placeholder="lichen-upload"></label>
-      <label>Collection<input data-setting="internetArchive.collection" type="text" value="${escapeHtml(internetArchive.collection ?? '')}" placeholder="opensource"></label>
-    </div>
+    ${serviceSections}
   `;
 
   // Attach theme change listener for instant application
@@ -325,6 +350,16 @@ function renderSettingsForm() {
     });
   }
 }
+
+settingsForm.addEventListener('click', (event) => {
+  const apiLink = event.target.closest('[data-api-link]');
+  if (!apiLink) {
+    return;
+  }
+
+  event.preventDefault();
+  api.openExternalUrl(apiLink.dataset.apiLink);
+});
 
 function collectSettings() {
   const nextSettings = {
