@@ -9,6 +9,7 @@ import {
 	loadHistory,
 	loadSettings,
 	saveSettings,
+	deleteHistoryRecords,
 } from './app-settings.js';
 import {
 	getSupportedServices,
@@ -79,6 +80,16 @@ export function registerIpcHandlers(ipcMain, context) {
 
 	ipcMain.handle('app:get-history', async () => {
 		return loadHistory();
+	});
+
+	ipcMain.handle('app:delete-history-records', async (_event, recordIds) => {
+		if (!Array.isArray(recordIds) || recordIds.length === 0) {
+			throw new Error('Please select at least one record to delete.');
+		}
+
+		const updatedHistory = await deleteHistoryRecords(recordIds);
+		log.settings(`Deleted ${recordIds.length} history record(s).`);
+		return updatedHistory;
 	});
 
 	ipcMain.handle('app:open-history-window', async () => {

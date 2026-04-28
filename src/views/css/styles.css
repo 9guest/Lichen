@@ -570,6 +570,7 @@ body::before {
 }
 
 .primary-button,
+.danger-button,
 .ghost-button {
 	appearance: none;
 	border: 0;
@@ -586,6 +587,12 @@ body::before {
 	box-shadow: 0 12px 28px rgba(15, 118, 110, 0.28);
 }
 
+.danger-button {
+	color: white;
+	background: linear-gradient(135deg, #ef4444, #dc2626);
+	box-shadow: 0 12px 28px rgba(239, 68, 68, 0.28);
+}
+
 .ghost-button {
 	color: #eeeeee;
 	background: rgba(57, 62, 70, 0.94);
@@ -597,6 +604,7 @@ body::before {
 }
 
 .primary-button:hover,
+.danger-button:hover,
 .ghost-button:hover {
 	transform: translateY(-1px);
 }

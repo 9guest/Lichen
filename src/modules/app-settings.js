@@ -118,6 +118,14 @@ export async function appendHistory(record) {
   return history;
 }
 
+export async function deleteHistoryRecords(recordIds) {
+  const history = await loadHistory();
+  const idsToDelete = new Set(recordIds);
+  history.records = history.records.filter((record) => !idsToDelete.has(record.id));
+  await saveHistory(history);
+  return history;
+}
+
 export function getDefaultSettings() {
   return normalizeSettings();
 }

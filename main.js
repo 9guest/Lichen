@@ -14,6 +14,7 @@ const preloadDir = path.join(__dirname, 'src', 'preload', 'preload.js');
 let mainWindow = null;
 
 // Register the protocol handler
+// able to handle deep links like ycslichen://some/path
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
     app.setAsDefaultProtocolClient('ycslichen', process.execPath, [path.resolve(process.argv[1])])
@@ -63,7 +64,7 @@ if (!gotTheLock) {
     }
 
     // the commandLine is array of strings in which last element is deep link url
-    dialog.showErrorBox('Welcome Back', `You arrived from : ${commandLine.pop()}`)
+    // dialog.showErrorBox('Welcome Back', `You arrived from : ${commandLine.pop()}`)
     log.app('Second instance launched with URL:', commandLine.pop());
   })
 

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('lichen', {
   validateServiceCredentials: (serviceId) => ipcRenderer.invoke('app:validate-service-credentials', serviceId),
   getHistory: () => ipcRenderer.invoke('app:get-history'),
   uploadFiles: (payload) => ipcRenderer.invoke('app:upload-files', payload),
+  deleteHistoryRecords: (recordIds) => ipcRenderer.invoke('app:delete-history-records', recordIds),
   openHistoryWindow: () => ipcRenderer.invoke('app:open-history-window'),
   openFileDialog: () => ipcRenderer.invoke('app:open-file-dialog'),
   openExternalUrl: (url) => ipcRenderer.invoke('app:open-external-url', url),

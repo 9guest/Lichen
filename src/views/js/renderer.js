@@ -758,6 +758,29 @@ historyExportBtn.addEventListener('click', () => {
   showToast('Export completed!');
 });
 
+document.getElementById('history-delete').addEventListener('click', async () => {
+  if (state.selectedHistoryIds.length === 0) {
+    alert('Select at least one item to delete.');
+    return;
+  }
+
+  const confirmDelete = confirm(`Are you sure you want to delete ${state.selectedHistoryIds.length} record(s)? This action cannot be undone.`);
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    const updatedHistory = await api.deleteHistoryRecords(state.selectedHistoryIds);
+    state.historyRecords = updatedHistory.records ?? [];
+    state.selectedHistoryIds = [];
+    renderHistory();
+    showToast('Records deleted successfully!');
+  } catch (error) {
+    console.error('Failed to delete history records:', error);
+    alert(`Failed to delete records: ${error.message}`);
+  }
+});
+
 // ============================================================================
 // EVENT HANDLERS - SETTINGS PAGE
 // ============================================================================
