@@ -1,13 +1,15 @@
 // Modules to control application life and create native browser window
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell, ipcMain, screen, Menu } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { registerIpcHandlers } from './src/modules/app-ipc-handler.js';
+import log from './src/modules/app-color-log.js';
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const indexDir = path.join(__dirname, 'src', 'index.html');
-const preloadDir = path.join(__dirname, 'src', 'preload.js');
+const indexDir = path.join(__dirname, 'src', 'views', 'html', 'index.html');
+const preloadDir = path.join(__dirname, 'src', 'preload', 'preload.js');
 
 let mainWindow = null;
 
@@ -52,10 +54,17 @@ if (!gotTheLock) {
 
     // the commandLine is array of strings in which last element is deep link url
     dialog.showErrorBox('Welcome Back', `You arrived from : ${commandLine.pop()}`)
+    log.app('Second instance launched with URL:', commandLine.pop());
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    
+    // Create Windows
     createWindow()
+
+    // Register IPC Handlers
+    registerIpcHandlers(ipcMain, { mainWindow, dialog, shell });
+    log.ipc('IPC handlers registered.');
 
     app.on('activate', function () {
       // On macOS, it's common to re-create a window in the app when the

@@ -109,6 +109,7 @@
     "electron-builder": "26.8.1"
   },
   "dependencies": {
+    "colors": "^1.4.0",
     "electron-updater": "^6.8.3"
   }
 }
