@@ -7,7 +7,6 @@
   <img src="https://img.shields.io/github/license/9guest/Lichen" alt="License" />
    <img src="https://img.shields.io/github/package-json/v/9guest/Lichen" alt="Version" />
    <img src="https://img.shields.io/github/issues/9guest/Lichen" alt="Issues" />
-   <img src="https://img.shields.io/github/actions/workflow/status/9guest/Lichen/build.yml?branch=main" alt="Build Status" />
    <img src="https://img.shields.io/github/stars/9guest/Lichen?style=social" alt="GitHub Stars" />
 </p>
 
