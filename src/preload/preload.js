@@ -6,7 +6,7 @@
  *
  * https://www.electronjs.org/docs/latest/tutorial/sandbox
  */
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 function subscribe(channel, callback) {
   const listener = (_event, payload) => callback(payload);
@@ -16,6 +16,13 @@ function subscribe(channel, callback) {
 }
 
 contextBridge.exposeInMainWorld('lichen', {
+  getFilePath: (file) => {
+    try {
+      return webUtils.getPathForFile(file);
+    } catch (e) {
+      return file?.path || '';
+    }
+  },
   loadBootstrapData: () => ipcRenderer.invoke('app:load-bootstrap-data'),
   saveSettings: (settings) => ipcRenderer.invoke('app:save-settings', settings),
   validateServiceCredentials: (serviceId) => ipcRenderer.invoke('app:validate-service-credentials', serviceId),

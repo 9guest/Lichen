@@ -508,6 +508,9 @@ document.getElementById('upload-clear').addEventListener('click', () => {
   renderSelectedFiles();
 });
 
+window.addEventListener('dragover', (event) => event.preventDefault(), false);
+window.addEventListener('drop', (event) => event.preventDefault(), false);
+
 dropZone.addEventListener('dragover', (event) => {
   event.preventDefault();
   dropZone.classList.add('drag-over');
@@ -539,7 +542,16 @@ function addFiles(fileList) {
       if (typeof file === 'string') {
         return file;
       }
-      // If it's a File object, extract the path
+      // Use webUtils exposed via preload API to resolve absolute filesystem path
+      if (api && typeof api.getFilePath === 'function') {
+        try {
+          const fullPath = api.getFilePath(file);
+          if (fullPath) return fullPath;
+        } catch (e) {
+          console.error('Error getting file path via webUtils:', e);
+        }
+      }
+      // Fallback for direct file object path property
       return file.path || file.webkitRelativePath || file.name;
     })
     .filter(Boolean);
