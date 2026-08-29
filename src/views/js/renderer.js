@@ -167,6 +167,35 @@ function renderServiceList() {
   }).join('');
 }
 
+function getFileIconClass(fileName = '', mimeType = '') {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext) || mimeType.startsWith('image/')) {
+    return 'fa-regular fa-file-image';
+  }
+  if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) || mimeType.startsWith('video/')) {
+    return 'fa-regular fa-file-video';
+  }
+  if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext) || mimeType.startsWith('audio/')) {
+    return 'fa-regular fa-file-audio';
+  }
+  if (['pdf'].includes(ext) || mimeType === 'application/pdf') {
+    return 'fa-regular fa-file-pdf';
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+    return 'fa-regular fa-file-zipper';
+  }
+  if (['txt', 'md', 'json', 'js', 'html', 'css'].includes(ext)) {
+    return 'fa-regular fa-file-lines';
+  }
+  return 'fa-regular fa-file';
+}
+
+function formatDuration(ms) {
+  if (!ms || ms < 0) return '';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 function renderTasksList() {
   if (state.uploadQueue.length === 0) {
     tasksQueue.classList.add('empty-state');
@@ -178,30 +207,112 @@ function renderTasksList() {
   tasksQueue.innerHTML = state.uploadQueue.map((task) => {
     const service = state.supportedServices.find((s) => s.id === task.serviceId);
     const progressPercent = Math.min(100, Math.max(0, task.progress || 0));
-    const statusClass = task.status === 'completed' ? 'completed' : task.status === 'failed' ? 'failed' : 'in-progress';
-    const statusLabel = task.status === 'completed' ? 'Completed' : task.status === 'failed' ? 'Failed' : 'Uploading';
-    
+    const isCompleted = task.status === 'completed';
+    const isFailed = task.status === 'failed';
+    const isCancelled = task.status === 'cancelled';
+    const isInProgress = task.status === 'in-progress';
+
+    let statusBadgeText = 'Uploading';
+    let statusBadgeIcon = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    let statusClass = 'in-progress';
+
+    if (isCompleted) {
+      statusBadgeText = task.failedCount > 0 ? 'Completed with errors' : 'Completed';
+      statusBadgeIcon = task.failedCount > 0 ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-check"></i>';
+      statusClass = task.failedCount > 0 ? 'completed-warning' : 'completed';
+    } else if (isFailed) {
+      statusBadgeText = 'Failed';
+      statusBadgeIcon = '<i class="fa-solid fa-xmark"></i>';
+      statusClass = 'failed';
+    } else if (isCancelled) {
+      statusBadgeText = 'Cancelled';
+      statusBadgeIcon = '<i class="fa-solid fa-ban"></i>';
+      statusClass = 'cancelled';
+    }
+
+    const files = task.files || [];
+    const completedCount = task.completedCount || files.filter(f => f.status === 'completed').length;
+    const failedCount = task.failedCount || files.filter(f => f.status === 'failed').length;
+    const totalFiles = files.length || task.filePaths?.length || 0;
+
     return `
-      <article class="task-card ${statusClass}">
-        <div class="task-info">
-          <div>
-            <strong>${escapeHtml(service?.label ?? task.serviceId)}</strong>
-            <span>${task.filePaths.length} file(s)</span>
+      <article class="task-card ${statusClass}" data-task-id="${escapeHtml(task.id)}">
+        <div class="task-card-header">
+          <div class="task-title-group">
+            <span class="task-service-badge"><i class="fa-solid fa-cloud"></i> ${escapeHtml(service?.label ?? task.serviceId)}</span>
+            <span class="task-stats-summary">${completedCount}/${totalFiles} completed${failedCount > 0 ? ` · <span class="text-danger">${failedCount} failed</span>` : ''}</span>
           </div>
-          <div class="task-status">${statusLabel}</div>
+          <div class="task-header-actions">
+            <span class="task-status-pill ${statusClass}">${statusBadgeIcon} ${statusBadgeText}</span>
+            ${isInProgress ? `<button class="ghost-button small danger-button" data-task-action="cancel" data-task-id="${escapeHtml(task.id)}" title="Cancel upload">Cancel</button>` : ''}
+          </div>
         </div>
-        <div class="progress-shell"><div class="progress-bar" style="width: ${progressPercent}%"></div></div>
-        <div class="task-progress">${progressPercent}%</div>
-        ${task.results && task.results.length > 0 ? `
-          <div class="task-results">
-            ${task.results.map((result) => `
-              <div class="result-row ${result.status === 'failed' ? 'failed' : 'success'}">
-                <span>${escapeHtml(result.fileName)}</span>
-                ${result.status === 'failed' ? `<small>${escapeHtml(result.error ?? 'Failed')}</small>` : ''}
-              </div>
-            `).join('')}
+
+        <div class="task-progress-section">
+          <div class="progress-shell"><div class="progress-bar ${isInProgress ? 'animated-striped' : ''}" style="width: ${progressPercent}%"></div></div>
+          <span class="task-progress-percent">${progressPercent}%</span>
+        </div>
+
+        ${isInProgress && task.currentFile ? `
+          <div class="active-file-indicator">
+            <span class="active-file-pulse"><i class="fa-solid fa-cloud-arrow-up fa-bounce"></i></span>
+            <div class="active-file-details">
+              <span class="active-file-name">Uploading [${task.currentFile.index}/${task.currentFile.total}]: <strong>${escapeHtml(task.currentFile.fileName)}</strong></span>
+              ${task.currentFile.fileSize ? `<span class="active-file-size">${escapeHtml(task.currentFile.fileSize)}</span>` : ''}
+            </div>
           </div>
         ` : ''}
+
+        <div class="task-files-container">
+          <div class="task-files-list">
+            ${files.map((file) => {
+              const fileIcon = getFileIconClass(file.fileName, file.mimeType);
+              let stateIcon = '<i class="fa-regular fa-clock text-muted"></i>';
+              let stateText = 'Queued';
+              let rowStatusClass = 'file-pending';
+
+              if (file.status === 'uploading') {
+                stateIcon = '<i class="fa-solid fa-spinner fa-spin text-accent"></i>';
+                stateText = 'Uploading...';
+                rowStatusClass = 'file-uploading';
+              } else if (file.status === 'completed') {
+                stateIcon = '<i class="fa-solid fa-circle-check text-success"></i>';
+                stateText = file.uploadedInMs ? `Done in ${formatDuration(file.uploadedInMs)}` : 'Done';
+                rowStatusClass = 'file-completed';
+              } else if (file.status === 'failed') {
+                stateIcon = '<i class="fa-solid fa-circle-exclamation text-danger"></i>';
+                stateText = file.error || 'Failed';
+                rowStatusClass = 'file-failed';
+              } else if (file.status === 'cancelled') {
+                stateIcon = '<i class="fa-solid fa-ban text-muted"></i>';
+                stateText = 'Cancelled';
+                rowStatusClass = 'file-cancelled';
+              }
+
+              return `
+                <div class="task-file-row ${rowStatusClass}">
+                  <div class="task-file-type-icon"><i class="${fileIcon}"></i></div>
+                  <div class="task-file-main">
+                    <div class="task-file-title-row">
+                      <strong class="task-file-name" title="${escapeHtml(file.fileName)}">${escapeHtml(file.fileName)}</strong>
+                      ${file.formattedSize ? `<span class="task-file-size-tag">${escapeHtml(file.formattedSize)}</span>` : ''}
+                    </div>
+                    <div class="task-file-sub-row">
+                      <span class="task-file-state-icon">${stateIcon}</span>
+                      <span class="task-file-state-text" title="${escapeHtml(stateText)}">${escapeHtml(stateText)}</span>
+                    </div>
+                  </div>
+                  ${file.status === 'completed' && file.directUrl ? `
+                    <div class="task-file-actions">
+                      <button class="ghost-button small icon-button" data-copy-link="${escapeHtml(file.directUrl)}" title="Copy link" aria-label="Copy link">⧉</button>
+                      <button class="ghost-button small icon-button" data-open-link="${escapeHtml(file.directUrl)}" title="Open in browser" aria-label="Open in browser">↗</button>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
       </article>
     `;
   }).join('');
@@ -394,12 +505,26 @@ function renderHistory() {
   syncHistorySelection();
 
   const visibleRecords = getFilteredHistoryRecords();
+  const totalCountEl = document.getElementById('history-total-count');
+  const servicesCountEl = document.getElementById('history-services-count');
+  const selectedCountEl = document.getElementById('history-selected-count');
+
+  if (totalCountEl) totalCountEl.textContent = state.historyRecords.length;
+  if (servicesCountEl) {
+    const uniqueServices = new Set(state.historyRecords.flatMap(getHistoryServiceNames));
+    servicesCountEl.textContent = uniqueServices.size;
+  }
+  if (selectedCountEl) selectedCountEl.textContent = state.selectedHistoryIds.length;
 
   if (visibleRecords.length === 0) {
     historyList.classList.add('empty-state');
-    historyList.textContent = state.historyRecords.length === 0
-      ? 'No upload history yet.'
-      : 'No history items match the current filter.';
+    historyList.innerHTML = `
+      <div class="history-empty-container">
+        <i class="fa-regular fa-folder-open empty-icon"></i>
+        <strong>${state.historyRecords.length === 0 ? 'No upload history yet' : 'No matching files found'}</strong>
+        <p>${state.historyRecords.length === 0 ? 'Uploaded files will appear here automatically.' : 'Try adjusting your search query or filters.'}</p>
+      </div>
+    `;
     updateHistorySummary();
     return;
   }
@@ -408,23 +533,73 @@ function renderHistory() {
   historyList.innerHTML = visibleRecords.map((record) => {
     const isSelected = state.selectedHistoryIds.includes(record.id);
     const serviceNames = getHistoryServiceNames(record);
+    const fileIcon = getFileIconClass(record.fileName, record.mimeType);
+    const isImage = /^image\//.test(record.mimeType ?? '') || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(record.fileName ?? '');
+    
+    // Format timestamp nicely
+    let formattedDate = record.uploadedAt || '';
+    try {
+      if (record.uploadedAt) {
+        const d = new Date(record.uploadedAt);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        }
+      }
+    } catch {}
+
+    const sizeDisplay = record.formattedSize || (record.fileSize ? formatBytes(record.fileSize) : '');
 
     return `
-      <article class="history-row ${isSelected ? 'active' : ''}" data-history-id="${escapeHtml(record.id)}">
-        <label class="history-row-select" aria-label="Select ${escapeHtml(record.fileName)}">
-          <input type="checkbox" data-history-select="${escapeHtml(record.id)}" ${isSelected ? 'checked' : ''}>
-        </label>
-        <div class="history-row-main">
-          <strong>${escapeHtml(record.fileName)}</strong>
-          <div class="history-row-meta">
-            <span class="history-service-pill">${escapeHtml(serviceNames.join(', '))}</span>
-            <small>${escapeHtml(record.uploadedAt ?? '')}</small>
+      <article class="history-card ${isSelected ? 'selected' : ''}" data-history-id="${escapeHtml(record.id)}">
+        <div class="history-card-left">
+          <label class="history-checkbox-wrap" aria-label="Select ${escapeHtml(record.fileName)}">
+            <input type="checkbox" data-history-select="${escapeHtml(record.id)}" ${isSelected ? 'checked' : ''}>
+            <span class="custom-checkbox"></span>
+          </label>
+          
+          <div class="history-thumbnail-box" data-history-action="preview" data-history-id="${escapeHtml(record.id)}" title="Click to preview">
+            ${isImage && (record.previewUrl || record.directUrl) ? `
+              <img class="history-thumb-img" src="${escapeHtml(record.previewUrl || record.directUrl)}" alt="${escapeHtml(record.fileName)}" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex'">
+              <div class="history-thumb-fallback" style="display:none;"><i class="${fileIcon}"></i></div>
+            ` : `
+              <div class="history-thumb-fallback"><i class="${fileIcon}"></i></div>
+            `}
           </div>
         </div>
-        <div class="history-row-actions">
-          <button class="ghost-button small icon-button" data-history-action="copy" data-history-id="${escapeHtml(record.id)}" title="Copy link" aria-label="Copy link">⧉</button>
-          <button class="ghost-button small icon-button" data-history-action="preview" data-history-id="${escapeHtml(record.id)}" title="Open preview" aria-label="Open preview">◫</button>
-          <button class="ghost-button small icon-button" data-history-action="browser" data-history-id="${escapeHtml(record.id)}" title="Open in browser" aria-label="Open in browser">↗</button>
+
+        <div class="history-card-body">
+          <div class="history-card-title-row">
+            <strong class="history-file-name" title="${escapeHtml(record.fileName)}" data-history-action="preview" data-history-id="${escapeHtml(record.id)}">${escapeHtml(record.fileName)}</strong>
+          </div>
+
+          <div class="history-badges-row">
+            <span class="history-pill service-pill"><i class="fa-solid fa-cloud"></i> ${escapeHtml(serviceNames.join(', '))}</span>
+            ${sizeDisplay ? `<span class="history-pill size-pill"><i class="fa-solid fa-hard-drive"></i> ${escapeHtml(sizeDisplay)}</span>` : ''}
+            <span class="history-pill date-pill"><i class="fa-regular fa-clock"></i> ${escapeHtml(formattedDate)}</span>
+          </div>
+
+          <div class="history-link-box" title="Click to copy direct URL" data-copy-link="${escapeHtml(record.directUrl)}">
+            <i class="fa-solid fa-link link-icon"></i>
+            <span class="history-link-text">${escapeHtml(record.directUrl)}</span>
+          </div>
+        </div>
+
+        <div class="history-card-actions">
+          <button class="ghost-button icon-button" data-history-action="copy" data-history-id="${escapeHtml(record.id)}" title="Copy link" aria-label="Copy link">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <button class="ghost-button icon-button" data-history-action="preview" data-history-id="${escapeHtml(record.id)}" title="Preview media" aria-label="Preview media">
+            <i class="fa-regular fa-eye"></i>
+          </button>
+          <button class="ghost-button icon-button" data-history-action="browser" data-history-id="${escapeHtml(record.id)}" title="Open in browser" aria-label="Open in browser">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </button>
         </div>
       </article>
     `;
@@ -459,14 +634,37 @@ document.getElementById('upload-start').addEventListener('click', async () => {
     return;
   }
 
-  // Create a new task in the queue
+  // Create detailed file items
   const taskId = `task-${Date.now()}`;
+  const fileItems = state.selectedFiles.map((filePath, index) => {
+    const fileName = filePath.split(/[/\\]/).pop();
+    return {
+      id: `${taskId}-file-${index}`,
+      filePath,
+      fileName,
+      status: 'pending',
+      fileSize: 0,
+      formattedSize: '',
+      progress: 0,
+      uploadedInMs: null,
+      directUrl: '',
+      previewUrl: '',
+      error: null,
+    };
+  });
+
   const task = {
     id: taskId,
     serviceId: state.selectedService,
     filePaths: [...state.selectedFiles],
+    files: fileItems,
     status: 'in-progress',
     progress: 0,
+    completedCount: 0,
+    failedCount: 0,
+    totalFiles: fileItems.length,
+    currentFile: null,
+    createdAt: new Date().toISOString(),
     results: [],
   };
 
@@ -492,13 +690,17 @@ document.getElementById('upload-start').addEventListener('click', async () => {
     });
 
     task.results = uploadResults;
-    task.status = 'completed';
+    task.status = task.failedCount > 0 && task.completedCount === 0 ? 'failed' : 'completed';
     task.progress = 100;
+    task.currentFile = null;
     renderTasksList();
     loadHistory();  // Refresh history to show new uploads
-    showToast('Task completed!');
+    showToast(task.status === 'completed' ? 'Task completed!' : 'Task completed with errors.');
   } catch (error) {
-    task.status = 'failed';
+    if (task.status !== 'cancelled') {
+      task.status = 'failed';
+    }
+    task.currentFile = null;
     renderTasksList();
   }
 });
@@ -588,30 +790,122 @@ document.addEventListener('change', (event) => {
 // ============================================================================
 
 document.addEventListener('click', async (event) => {
-  const copyButton = event.target.closest('[data-copy-link]');
-  if (!copyButton) {
+  const cancelBtn = event.target.closest('[data-task-action="cancel"]');
+  if (cancelBtn) {
+    event.preventDefault();
+    await api.cancelUpload();
+    showToast('Cancelling upload...');
     return;
   }
 
-  const text = copyButton.dataset.copyLink;
-  await navigator.clipboard.writeText(text);
-  alert('Link copied to clipboard!');
+  const openBtn = event.target.closest('[data-open-link]');
+  if (openBtn) {
+    event.preventDefault();
+    const url = openBtn.dataset.openLink;
+    if (url) {
+      api.openExternalUrl(url);
+    }
+    return;
+  }
+
+  const copyButton = event.target.closest('[data-copy-link]');
+  if (copyButton) {
+    event.preventDefault();
+    const text = copyButton.dataset.copyLink;
+    if (text) {
+      await navigator.clipboard.writeText(text);
+      showToast('Link copied to clipboard!');
+    }
+    return;
+  }
 });
 
 api.onUploadProgress((payload) => {
-  // Update the current task in the queue with progress
-  if (state.uploadQueue.length > 0) {
-    const currentTask = state.uploadQueue[state.uploadQueue.length - 1];
+  if (state.uploadQueue.length === 0) return;
+  const currentTask = state.uploadQueue[state.uploadQueue.length - 1];
+  if (!currentTask) return;
+
+  if (payload?.stage === 'starting') {
+    const targetFile = currentTask.files?.find((f) => f.filePath === payload.filePath) 
+      || currentTask.files?.[(payload.fileIndex || 1) - 1];
     
-    if (typeof payload?.progress === 'number') {
-      currentTask.progress = payload.progress;
-      renderTasksList();
+    if (targetFile) {
+      targetFile.status = 'uploading';
+      if (payload.fileSize) targetFile.fileSize = payload.fileSize;
+      if (payload.formattedSize) targetFile.formattedSize = payload.formattedSize;
     }
 
-    if (payload?.stage === 'completed' && payload.result) {
-      currentTask.results.push(payload.result);
-      renderTasksList();
+    currentTask.currentFile = {
+      fileName: payload.fileName,
+      fileSize: payload.formattedSize,
+      index: payload.fileIndex || 1,
+      total: payload.totalFiles || currentTask.files?.length || 1,
+    };
+    if (typeof payload?.progress === 'number') {
+      currentTask.progress = payload.progress;
     }
+    renderTasksList();
+  } else if (payload?.stage === 'completed') {
+    const targetFile = currentTask.files?.find((f) => f.filePath === payload.filePath)
+      || currentTask.files?.[(payload.fileIndex || 1) - 1];
+    
+    if (targetFile) {
+      targetFile.status = 'completed';
+      if (payload.result) {
+        targetFile.directUrl = payload.result.directUrl;
+        targetFile.previewUrl = payload.result.previewUrl;
+        targetFile.uploadedInMs = payload.result.uploadedInMs;
+        if (payload.result.fileSize) targetFile.fileSize = payload.result.fileSize;
+        if (payload.result.formattedSize) targetFile.formattedSize = payload.result.formattedSize;
+      }
+    }
+
+    currentTask.completedCount = (currentTask.completedCount || 0) + 1;
+    if (typeof payload?.progress === 'number') {
+      currentTask.progress = payload.progress;
+    }
+    if (payload.result) {
+      currentTask.results.push(payload.result);
+      // Auto-reload history so completed items immediately show up even mid-upload
+      loadHistory();
+    }
+    renderTasksList();
+  } else if (payload?.stage === 'failed') {
+    const targetFile = currentTask.files?.find((f) => f.filePath === payload.filePath)
+      || currentTask.files?.[(payload.fileIndex || 1) - 1];
+    
+    if (targetFile) {
+      targetFile.status = 'failed';
+      targetFile.error = payload.error || payload.result?.error || 'Upload failed';
+    }
+
+    currentTask.failedCount = (currentTask.failedCount || 0) + 1;
+    if (typeof payload?.progress === 'number') {
+      currentTask.progress = payload.progress;
+    }
+    if (payload.result) {
+      currentTask.results.push(payload.result);
+    }
+    renderTasksList();
+  } else if (payload?.stage === 'finished') {
+    currentTask.status = currentTask.failedCount > 0 && currentTask.completedCount === 0 ? 'failed' : 'completed';
+    currentTask.progress = 100;
+    currentTask.currentFile = null;
+    renderTasksList();
+    loadHistory();
+  } else if (payload?.stage === 'cancelled') {
+    currentTask.status = 'cancelled';
+    currentTask.currentFile = null;
+    if (currentTask.files) {
+      for (const f of currentTask.files) {
+        if (f.status === 'pending' || f.status === 'uploading') {
+          f.status = 'cancelled';
+        }
+      }
+    }
+    renderTasksList();
+    loadHistory();
+    showToast('Upload was cancelled.');
   }
 });
 
@@ -631,11 +925,7 @@ function getHistoryRecordById(recordId) {
 }
 
 function openHistoryPreview(record) {
-  if (!record) {
-    return;
-  }
-
-  window.open(record.directUrl, '_blank', 'noreferrer');
+  openHistoryModal(record);
 }
 
 function openHistoryModal(record) {
@@ -643,21 +933,45 @@ function openHistoryModal(record) {
     return;
   }
 
-  const isImage = /^image\//.test(record.mimeType ?? '') || /\.(png|jpg|jpeg|gif|webp|bmp)$/i.test(record.fileName ?? '');
+  const modalTitle = document.getElementById('modal-title');
+  const modalSubtitle = document.getElementById('modal-subtitle');
+  const modalDirectUrl = document.getElementById('modal-direct-url');
+  const copyBtn = document.getElementById('modal-copy-link');
+  const browserBtn = document.getElementById('modal-open-browser');
+
+  if (modalTitle) modalTitle.textContent = record.fileName;
+  if (modalSubtitle) modalSubtitle.textContent = `${record.serviceLabel || record.uploadedBy || 'Cloud'} · ${record.formattedSize || ''}`;
+  if (modalDirectUrl) modalDirectUrl.value = record.directUrl || '';
+
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(record.directUrl);
+      showToast('Link copied to clipboard!');
+    };
+  }
+
+  if (browserBtn) {
+    browserBtn.onclick = () => {
+      api.openExternalUrl(record.directUrl);
+    };
+  }
+
+  const isImage = /^image\//.test(record.mimeType ?? '') || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(record.fileName ?? '');
   const isVideo = /^video\//.test(record.mimeType ?? '') || /\.(mp4|mov|webm)$/i.test(record.fileName ?? '');
   const isAudio = /^audio\//.test(record.mimeType ?? '') || /\.(mp3|wav|ogg)$/i.test(record.fileName ?? '');
 
   if (isImage) {
-    modalPreviewMedia.innerHTML = `<img src="${escapeHtml(record.previewUrl ?? record.directUrl)}" alt="${escapeHtml(record.fileName)}">`;
+    modalPreviewMedia.innerHTML = `<img class="modal-media-element" src="${escapeHtml(record.previewUrl ?? record.directUrl)}" alt="${escapeHtml(record.fileName)}">`;
   } else if (isVideo) {
-    modalPreviewMedia.innerHTML = `<video controls src="${escapeHtml(record.previewUrl ?? record.directUrl)}"></video>`;
+    modalPreviewMedia.innerHTML = `<video class="modal-media-element" controls autoplay src="${escapeHtml(record.previewUrl ?? record.directUrl)}"></video>`;
   } else if (isAudio) {
-    modalPreviewMedia.innerHTML = `<audio controls src="${escapeHtml(record.previewUrl ?? record.directUrl)}"></audio>`;
+    modalPreviewMedia.innerHTML = `<div class="audio-modal-container"><i class="fa-solid fa-music fa-3x"></i><audio controls autoplay src="${escapeHtml(record.previewUrl ?? record.directUrl)}"></audio></div>`;
   } else {
     modalPreviewMedia.innerHTML = `
       <div class="preview-placeholder">
+        <i class="fa-regular fa-file fa-3x"></i>
         <strong>${escapeHtml(record.fileName)}</strong>
-        <span>No embedded preview available for this file type.</span>
+        <span>Preview is not supported for this file type. Use "Open in Browser" to view.</span>
       </div>
     `;
   }
@@ -695,12 +1009,12 @@ historyList.addEventListener('click', (event) => {
   const action = actionButton.dataset.historyAction;
   if (action === 'copy') {
     navigator.clipboard.writeText(record.directUrl);
-    showToast('Copied to clipboard!');
+    showToast('Link copied to clipboard!');
     return;
   }
 
   if (action === 'preview') {
-    openHistoryPreview(record);
+    openHistoryModal(record);
     return;
   }
 

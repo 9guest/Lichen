@@ -93,36 +93,66 @@
             <p>View and manage all your uploaded files.</p>
           </div>
 
-          <article class="card history-panel">
-            <div class="section-heading">
-              <h3>Uploaded files</h3>
-              <button class="ghost-button small" id="history-reload">Reload</button>
+          <div class="history-stats-bar">
+            <div class="stat-chip">
+              <span class="stat-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
+              <div class="stat-info">
+                <span class="stat-num" id="history-total-count">0</span>
+                <span class="stat-lbl">Total Uploads</span>
+              </div>
             </div>
+            <div class="stat-chip">
+              <span class="stat-icon"><i class="fa-solid fa-server"></i></span>
+              <div class="stat-info">
+                <span class="stat-num" id="history-services-count">0</span>
+                <span class="stat-lbl">Services Used</span>
+              </div>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-icon"><i class="fa-solid fa-check-double"></i></span>
+              <div class="stat-info">
+                <span class="stat-num" id="history-selected-count">0</span>
+                <span class="stat-lbl">Selected</span>
+              </div>
+            </div>
+          </div>
 
+          <article class="card history-panel">
             <div class="history-toolbar">
-              <label class="history-filter">
-                <span>Search</span>
-                <input id="history-search" type="search" placeholder="Search by file name">
-              </label>
-              <label class="history-filter">
-                <span>Service</span>
-                <select id="history-service-filter">
-                  <option value="all">All services</option>
-                </select>
-              </label>
-              <label class="history-filter">
-                <span>From</span>
-                <input id="history-date-from" type="date">
-              </label>
-              <label class="history-filter">
-                <span>To</span>
-                <input id="history-date-to" type="date">
-              </label>
-              <div class="history-toolbar-actions">
-                <button class="ghost-button small" id="history-select-visible">Select visible</button>
-                <button class="ghost-button small" id="history-clear-selection">Clear selection</button>
-                <button class="primary-button" id="history-export">Export JSON</button>
-                <button class="danger-button" id="history-delete">Delete selected</button>
+              <div class="history-search-row">
+                <div class="history-search-box">
+                  <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                  <input id="history-search" type="search" placeholder="Search by file name or direct link...">
+                </div>
+                <button class="ghost-button icon-button" id="history-reload" title="Reload history">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+
+              <div class="history-filters-actions-row">
+                <div class="history-filters-group">
+                  <label class="history-filter-item">
+                    <span>Service</span>
+                    <select id="history-service-filter">
+                      <option value="all">All services</option>
+                    </select>
+                  </label>
+                  <label class="history-filter-item">
+                    <span>From</span>
+                    <input id="history-date-from" type="date">
+                  </label>
+                  <label class="history-filter-item">
+                    <span>To</span>
+                    <input id="history-date-to" type="date">
+                  </label>
+                </div>
+
+                <div class="history-actions-group">
+                  <button class="ghost-button small" id="history-select-visible"><i class="fa-regular fa-square-check"></i> Select visible</button>
+                  <button class="ghost-button small" id="history-clear-selection"><i class="fa-regular fa-square"></i> Clear</button>
+                  <button class="primary-button small" id="history-export"><i class="fa-solid fa-file-export"></i> Export JSON</button>
+                  <button class="danger-button small" id="history-delete"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                </div>
               </div>
             </div>
 
@@ -150,9 +180,23 @@
 
     <!-- Preview Modal -->
     <div id="preview-modal" class="modal hidden">
-      <div class="modal-content">
-        <button class="modal-close" id="modal-close">✕</button>
+      <div class="modal-backdrop"></div>
+      <div class="modal-content card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="modal-title">File Preview</h3>
+            <span id="modal-subtitle" class="modal-subtitle"></span>
+          </div>
+          <button class="modal-close" id="modal-close" title="Close preview">✕</button>
+        </div>
         <div id="modal-preview-media" class="modal-preview-media"></div>
+        <div class="modal-footer" id="modal-footer">
+          <input type="text" id="modal-direct-url" readonly class="modal-url-input" placeholder="URL will appear here">
+          <div class="modal-btn-group">
+            <button class="primary-button small" id="modal-copy-link"><i class="fa-regular fa-copy"></i> Copy Link</button>
+            <button class="ghost-button small" id="modal-open-browser"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Browser</button>
+          </div>
+        </div>
       </div>
     </div>
 

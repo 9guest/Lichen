@@ -42,6 +42,23 @@ const MIME_TYPES = {
   '.txt': 'text/plain',
 };
 
+function formatBytes(bytes) {
+  if (bytes === 0 || bytes === undefined || bytes === null || Number.isNaN(bytes)) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
+
+async function getFileSize(filePath) {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.size;
+  } catch {
+    return 0;
+  }
+}
+
 function getFileName(filePath) {
   return path.basename(filePath);
 }
@@ -99,13 +116,15 @@ function sanitizeIdentifier(value) {
     .slice(0, 64) || `lichen-${Date.now()}`;
 }
 
-function createImageResult({ serviceId, filePath, uploadResponse, directUrl, previewUrl }) {
+function createImageResult({ serviceId, filePath, uploadResponse, directUrl, previewUrl, fileSize, formattedSize }) {
   return {
     id: crypto.randomUUID(),
     serviceId,
     serviceLabel: SERVICE_LABELS[serviceId] ?? serviceId,
     fileName: getFileName(filePath),
     filePath,
+    fileSize: fileSize ?? 0,
+    formattedSize: formattedSize ?? formatBytes(fileSize ?? 0),
     mimeType: getMimeType(filePath),
     directUrl,
     previewUrl: previewUrl ?? directUrl,
@@ -273,8 +292,14 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
   const results = [];
   const totalTasks = Math.max(filePaths.length * serviceIds.length, 1);
   let completedTasks = 0;
+  let fileIndex = 0;
 
   for (const filePath of filePaths) {
+    fileIndex += 1;
+    const fileName = getFileName(filePath);
+    const fileSize = await getFileSize(filePath);
+    const formattedSize = formatBytes(fileSize);
+
     for (const serviceId of serviceIds) {
       if (signal?.aborted) {
         throw new Error('Upload cancelled.');
@@ -288,8 +313,13 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
       onProgress?.({
         stage: 'starting',
         serviceId,
+        serviceLabel: adapter.label,
         filePath,
-        fileName: getFileName(filePath),
+        fileName,
+        fileSize,
+        formattedSize,
+        fileIndex,
+        totalFiles: filePaths.length,
         progress: Math.round((completedTasks / totalTasks) * 100),
         completedTasks,
         totalTasks,
@@ -303,6 +333,8 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
 
         const successRecord = {
           ...result,
+          fileSize: result.fileSize || fileSize,
+          formattedSize: result.formattedSize || formattedSize,
           uploadedBy: adapter.label,
           uploadedInMs: Date.now() - startedAt,
           status: 'success',
@@ -313,8 +345,13 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
         onProgress?.({
           stage: 'completed',
           serviceId,
+          serviceLabel: adapter.label,
           filePath,
-          fileName: getFileName(filePath),
+          fileName,
+          fileSize,
+          formattedSize,
+          fileIndex,
+          totalFiles: filePaths.length,
           progress: Math.round((completedTasks / totalTasks) * 100),
           completedTasks,
           totalTasks,
@@ -327,8 +364,10 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
           id: crypto.randomUUID(),
           serviceId,
           serviceLabel: adapter.label,
-          fileName: getFileName(filePath),
+          fileName,
           filePath,
+          fileSize,
+          formattedSize,
           mimeType: getMimeType(filePath),
           directUrl: '',
           previewUrl: '',
@@ -344,8 +383,13 @@ export async function uploadFiles({ filePaths, serviceIds, settings, onProgress,
         onProgress?.({
           stage: 'failed',
           serviceId,
+          serviceLabel: adapter.label,
           filePath,
-          fileName: getFileName(filePath),
+          fileName,
+          fileSize,
+          formattedSize,
+          fileIndex,
+          totalFiles: filePaths.length,
           progress: Math.round((completedTasks / totalTasks) * 100),
           completedTasks,
           totalTasks,

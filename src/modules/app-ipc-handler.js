@@ -116,31 +116,43 @@ export function registerIpcHandlers(ipcMain, context) {
 		const { signal } = activeUploadController;
 		const progressWindow = getMainWindow();
 
-		const results = await uploadFiles({
-			filePaths: files,
-			serviceIds,
-			settings,
-			signal,
-			onProgress: async (payload) => {
-				progressWindow?.webContents.send('app:upload-progress', payload);
-			},
-		});
+		try {
+			const results = await uploadFiles({
+				filePaths: files,
+				serviceIds,
+				settings,
+				signal,
+				onProgress: async (progressPayload) => {
+					if (progressPayload?.stage === 'completed' && progressPayload.result?.status === 'success') {
+						try {
+							await appendHistory(progressPayload.result);
+						} catch (e) {
+							console.error('Failed to append history record:', e);
+						}
+					}
+					progressWindow?.webContents.send('app:upload-progress', progressPayload);
+				},
+			});
 
-		for (const result of results.filter((item) => item.status === 'success')) {
-			await appendHistory(result);
+			progressWindow?.webContents.send('app:upload-progress', {
+				stage: 'finished',
+				progress: 100,
+				totalTasks: results.length,
+				completedTasks: results.length,
+				results,
+			});
+
+			return results;
+		} catch (error) {
+			const isAborted = signal.aborted;
+			progressWindow?.webContents.send('app:upload-progress', {
+				stage: isAborted ? 'cancelled' : 'error',
+				error: error?.message ?? 'Upload process failed',
+			});
+			throw error;
+		} finally {
+			activeUploadController = null;
 		}
-
-		progressWindow?.webContents.send('app:upload-progress', {
-			stage: 'finished',
-			progress: 100,
-			totalTasks: results.length,
-			completedTasks: results.length,
-			results,
-		});
-
-		activeUploadController = null;
-
-		return results;
 	});
 
 	ipcMain.handle('app:cancel-upload', async () => {
